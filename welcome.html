@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Welcome</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/style-blank@latest/blank.css"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/skapi-js@latest/dist/skapi.js"></script>
+    <script src="photoUtil.js"></script>
+    <script>
+      const skapi = new Skapi(
+        "ap22Jz4HGivkqJls9Sdw",
+        "a4dd8739-ceac-4fec-b708-8019b3cf131a"
+      );
+    </script>
+  </head>
+  <script>
+    const LOADING = "Loading...";
+  </script>
+  <body>
+    <h1>Hello <span id="hello_name"></span></h1>
+
+    <form action="index.html" onsubmit="skapi.logout(event)">
+      <input type="submit" value="Logout" />
+    </form>
+
+    <hr />
+    <h2>Upload photo</h2>
+
+    <form onsubmit="uploadPhoto(event)">
+      <input type="file" name="userPhoto" accept="image/*" required />
+
+      <br />
+      <br />
+
+      <label>
+        Description:
+        <br />
+        <input type="text" name="description" />
+        <br />
+      </label>
+      <br />
+      <label>
+        Tags:
+        <br />
+        <label>
+          <input type="checkbox" value="nature" class="tag" />
+          Nature </label
+        ><br />
+        <label>
+          <input type="checkbox" value="family" class="tag" />
+          Family </label
+        ><br />
+        <label>
+          <input type="checkbox" value="people" class="tag" />
+          People </label
+        ><br />
+        <label>
+          <input type="checkbox" value="city" class="tag" />
+          City
+        </label>
+        <br />
+        <br />
+      </label>
+      <input type="submit" value="Upload" />
+      <h3 id="loading_text"></h3>
+    </form>
+
+    <br />
+    <hr />
+
+    <h2>Uploaded Photos</h2>
+
+    <section id="user_photos"></section>
+    <style>
+      img {
+        width: 100%;
+      }
+      .feed{
+        width: 400px;
+      }
+    </style>
+  </body>
+</html>
+
+<script>
+
+    let userID;
+
+  skapi.getProfile().then((profile) => {
+    console.log(profile);
+
+    if (profile === null) {
+      window.location.href = "index.html";
+    } else {
+      hello_name.innerText = profile.email;
+      getPhotos();
+      userID = profile.user_id;
+    }
+  });
+
+  function getPhotos() {
+    const url = window.location.href;
+    const url_object = new URL(url);
+    const params = new URLSearchParams(url_object.search);
+    let tagSearch = params.get("tag");
+
+    skapi
+      .getRecords(
+        {
+          table: {
+            name: "photos",
+            access_group: "public",
+          },
+          tag: tagSearch || undefined,
+        },
+        {
+          ascending: false,
+        }
+      )
+      .then((photos) => {
+        let list = photos.list;
+        console.log(list)
+        for (let i of list) {
+          let div = makePhoto(i);
+          user_photos.appendChild(div);
+
+          getAllComments(i.record_id);
+
+          let commentSection = document.getElementById(`number_of_comments_${i.record_id}`)
+          commentSection.innerHTML = `${(i.reference?.referenced_count || 0)} comment(s)`
+
+          checkedLike(i.record_id)
+
+          getAllLikes(i.record_id)
+        }
+      });
+  }
+
+  let myLikes = {
+    // [original post id]: like record id
+  };
+
+  function getAllLikes(record_id){
+    let numberOfLikes = 0
+    let p = document.getElementById(`number_of_likes_${record_id}`)
+    skapi.getIndexes({
+        table: 'like',
+        index: `like.${record_id}` 
+    }).then(response => {
+        let allPosts = response.list[0] // [..., ]
+        p.innerHTML = `${(allPosts?.number_of_records || 0)} like(s)`
+    });
+  }
+
+  function checkedLike(record_id){
+    skapi.getRecords(
+        {
+            table: {
+                name: 'like',
+                access_group: 'authorized',
+            },
+            reference: userID,
+            index: {
+                name: `like.${record_id}`,
+                value: true,
+            }
+        }
+    ).then(data =>{
+        if (data.list[0]){
+            let button = document.getElementById(record_id + '_like');
+            button.innerHTML = 'Liked';
+            myLikes[record_id] = data.list[0].record_id;
+        }
+    })
+  }
+
+  function uploadPhoto(event) {
+    loading_text.innerHTML = LOADING;
+
+    let tags = [];
+    let tagCheckboxes = document.getElementsByClassName("tag");
+
+    for (let i = 0; i < tagCheckboxes.length; i++) {
+      if (tagCheckboxes[i].checked) {
+        tags.push(tagCheckboxes[i].value);
+      }
+    }
+
+    console.log(tags);
+    skapi
+      .postRecord(event, {
+        table: {
+          name: "photos",
+          access_group: "public",
+        },
+        tags: tags,
+      })
+      .then((photo) => {
+        loading_text.innerHTML = "";
+        event.target.reset();
+        let div = makePhoto(photo);
+        user_photos.prepend(div);
+      });
+  }
+
+</script>

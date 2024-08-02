@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/style-blank@latest/blank.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/skapi-js@latest/dist/skapi.js"></script>
+    <script>
+        const skapi = new Skapi("ap22Jz4HGivkqJls9Sdw", "a4dd8739-ceac-4fec-b708-8019b3cf131a");
+    </script>
+</head>
+<body>
+    <h1>Start</h1>
+    <a href="login.html">Login</a><br>
+    <a href="signup.html">Sign Up</a>
+
+    <script>
+        skapi.getProfile().then(profile => {
+            console.log(profile);
+
+            if(profile){
+                window.location.href = 'welcome.html'
+            }
+        })
+    </script>
+</body>
+</html>
